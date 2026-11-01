@@ -8,12 +8,15 @@ staan tot je opnieuw gooit.
 
 Elke push naar `main` bouwt automatisch een APK via GitHub Actions en publiceert die als
 release: **[nieuwste versie](https://github.com/wdhertog/dice/releases/latest)**.
+Een push naar een andere branch maakt een aparte testapp "Dobbelstenen (test)" als pre-release,
+die naast de gewone app te installeren is.
 Open de `.apk` op je telefoon. Als Android erom vraagt, sta "installeren uit onbekende bronnen"
 toe. Nieuwe versies installeer je gewoon over de oude heen.
 
 ## Functies
 
 - 3D-dobbelstenen met physics: d4, d6, d8, d10, d12, d20 en d% (d100)
+- Afgeronde hoeken en randen (standaard aan, 15%; in te stellen of uit te zetten)
 - Gooien door te schudden, met trillen en geluid
 - Rusttijd na een worp instelbaar (1–30 s, standaard 2 s); het scherm blijft aan
 - Grootte van de dobbelstenen instelbaar
