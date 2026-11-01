@@ -23,6 +23,8 @@ const defaults = {
   vibrate: true,
   rest: 2, // seconds during which shakes are ignored after a throw
   size: 0.75,
+  round: true, // rounded edges and corners
+  roundness: 0.15, // fraction of the inradius
 };
 let state = { ...defaults };
 try {
@@ -53,6 +55,7 @@ const world = new DiceWorld($('tray'), {
   },
 });
 world.sizeFactor = state.size;
+world.rounding = state.round ? state.roundness : 0;
 
 function updateInsets() {
   world.setInsets($('topbar').offsetHeight, $('result').offsetHeight);
@@ -527,6 +530,31 @@ $('optSize').addEventListener('input', (e) => {
   $('sizeVal').textContent = `${Math.round(state.size * 100)}%`;
   world.setSize(state.size);
   save();
+});
+
+function renderRounding() {
+  $('optRound').checked = state.round;
+  $('optRoundness').value = state.roundness;
+  $('roundVal').textContent = `${Math.round(state.roundness * 100)}%`;
+  $('roundnessRow').classList.toggle('hidden', !state.round);
+}
+function applyRounding() {
+  world.rounding = state.round ? state.roundness : 0;
+  save();
+  renderRounding();
+  applyPreset(state.preset); // rebuild the dice with the new shape
+}
+renderRounding();
+$('optRound').addEventListener('change', (e) => {
+  state.round = e.target.checked;
+  applyRounding();
+});
+$('optRoundness').addEventListener('input', (e) => {
+  $('roundVal').textContent = `${Math.round(Number(e.target.value) * 100)}%`;
+});
+$('optRoundness').addEventListener('change', (e) => {
+  state.roundness = Number(e.target.value);
+  applyRounding();
 });
 
 // ---------- start ----------

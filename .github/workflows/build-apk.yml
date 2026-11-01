@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Branches other than main build a separate "Dobbelstenen (test)" app.
+      DICE_TEST_BUILD: ${{ github.ref != 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -56,12 +59,25 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk "dist/dobbelstenen-1.0.${{ github.run_number }}.apk"
+          if [ "$DICE_TEST_BUILD" = "true" ]; then name="dobbelstenen-test-1.0.${{ github.run_number }}"; else name="dobbelstenen-1.0.${{ github.run_number }}"; fi
+          cp app/build/outputs/apk/release/app-release.apk "dist/$name.apk"
 
       - uses: actions/upload-artifact@v4
         with:
           name: dobbelstenen-apk
           path: dist/*.apk
+
+      - name: Publish test pre-release
+        if: github.ref != 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          gh release create "test-1.0.${{ github.run_number }}" dist/*.apk \
+            --target "${{ github.sha }}" \
+            --prerelease \
+            --title "TEST $BRANCH 1.0.${{ github.run_number }}" \
+            --notes "Testversie van branch $BRANCH. Installeert als aparte app 'Dobbelstenen (test)' naast de gewone app."
 
       - name: Publish GitHub release
         if: github.ref == 'refs/heads/main'
