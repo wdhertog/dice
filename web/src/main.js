@@ -69,7 +69,9 @@ function describe(preset) {
 
 // ---------- rules (holding dice, throws per turn) ----------
 function rules() {
-  const p = state.preset;
+  // Built-in sets: take the defaults from the current app version, not from the
+  // copy saved by an older version.
+  const p = PRESETS.find((x) => x.id === state.preset.id) || state.preset;
   const o = state.rules[p.id] || {};
   return { hold: o.hold ?? !!p.hold, maxRolls: o.maxRolls ?? p.maxRolls ?? 0 };
 }
@@ -534,7 +536,8 @@ async function start() {
   const loaded = await Promise.all(state.customSkins.map((d) => skinFromData(d)));
   loaded.forEach(registerSkin);
   renderSkins();
-  applyPreset(state.preset);
+  // A built-in set saved by an older version is replaced by its current definition.
+  applyPreset(PRESETS.find((x) => x.id === state.preset.id) || state.preset);
 }
 start();
 window.__dice = { roll, world }; // handy for debugging
