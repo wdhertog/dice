@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f2e25" />
+  <title>Dobbelstenen</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="tray"></canvas>
+
+  <header id="topbar">
+    <button id="presetBtn" class="preset-btn" aria-label="Dobbelstenen kiezen">
+      <span class="title" id="presetName">Yahtzee</span>
+      <span class="sub" id="presetSub">5 × d6</span>
+    </button>
+    <button id="menuBtn" class="icon-btn" aria-label="Thema en instellingen">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 3a9 9 0 0 0 0 18c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01a1.5 1.5 0 0 1 1.13-2.49H16a5 5 0 0 0 5-5c0-4.42-4.03-8-9-8zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></svg>
+    </button>
+  </header>
+
+  <section id="result">
+    <div class="result-main">
+      <div class="headline" id="headline"></div>
+      <div class="sub" id="resultSub"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="status" id="status">
+      <svg class="ring" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15" /><circle class="ring-fg" id="ringFg" cx="18" cy="18" r="15" /></svg>
+      <span id="statusText">Schud je telefoon om te gooien</span>
+    </div>
+  </section>
+
+  <div id="backdrop" class="backdrop hidden"></div>
+  <div id="sheet" class="sheet hidden" role="dialog">
+    <div class="sheet-handle"></div>
+    <nav class="tabs">
+      <button data-tab="dice" class="active">Dobbelstenen</button>
+      <button data-tab="skins">Thema</button>
+      <button data-tab="settings">Instellingen</button>
+    </nav>
+    <div class="tab-body" data-tab="dice">
+      <h3>Snelkeuze</h3>
+      <div class="preset-list" id="presetList"></div>
+      <h3>Eigen combinatie</h3>
+      <div id="editor" class="editor"></div>
+      <div class="editor-actions">
+        <button id="addGroup" class="btn ghost">+ Dobbelsteen toevoegen</button>
+      </div>
+      <div class="editor-actions">
+        <input id="customName" class="text" placeholder="Naam (optioneel)" maxlength="30" />
+        <button id="saveCustom" class="btn ghost">Opslaan</button>
+        <button id="useCustom" class="btn primary">Gebruiken</button>
+      </div>
+    </div>
+    <div class="tab-body hidden" data-tab="skins">
+      <h3>Kies een thema</h3>
+      <div class="skin-grid" id="skinGrid"></div>
+      <p class="hint">Sommige sets (zoals Risk) gebruiken vaste kleuren per groep.</p>
+    </div>
+    <div class="tab-body hidden" data-tab="settings">
+      <label class="row"><span>Geluid</span><input type="checkbox" id="optSound" /></label>
+      <label class="row"><span>Trillen</span><input type="checkbox" id="optVibrate" /></label>
+      <label class="row col">
+        <span>Resultaat minimaal tonen: <b id="holdVal">20</b> seconden</span>
+        <input type="range" id="optHold" min="20" max="60" step="5" />
+      </label>
+      <p class="hint">Tijdens deze tijd wordt schudden genegeerd, zodat het resultaat niet per ongeluk verdwijnt. Het scherm blijft aan zolang de app open is.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
