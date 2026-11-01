@@ -1,10 +1,12 @@
 // Preconfigured dice combinations.
 // group: { type, count, skin? (overrides the chosen theme), label? }
 // mode: how the result is summarised (see evaluate.js)
+// hold: dice may be put aside and the rest re-thrown; maxRolls: throws per turn (0 = unlimited)
+// (both can be changed per set in the app)
 export const PRESETS = [
   { id: 'one', name: '1 dobbelsteen', sub: 'Mens erger je niet, Ganzenbord', groups: [{ type: 'd6', count: 1 }], mode: 'sum' },
   { id: 'two', name: '2 dobbelstenen', sub: 'Monopoly, Kolonisten van Catan', groups: [{ type: 'd6', count: 2 }], mode: 'sum' },
-  { id: 'yahtzee', name: 'Yahtzee', sub: '5 dobbelstenen', groups: [{ type: 'd6', count: 5 }], mode: 'yahtzee' },
+  { id: 'yahtzee', name: 'Yahtzee', sub: '5 dobbelstenen', groups: [{ type: 'd6', count: 5 }], mode: 'yahtzee', hold: true, maxRolls: 3 },
   {
     id: 'risk',
     name: 'Risk',
@@ -25,7 +27,7 @@ export const PRESETS = [
     ],
     mode: 'risk',
   },
-  { id: 'farkle', name: '10.000 / Farkle', sub: '6 dobbelstenen', groups: [{ type: 'd6', count: 6 }], mode: 'sum' },
+  { id: 'farkle', name: '10.000 / Farkle', sub: '6 dobbelstenen', groups: [{ type: 'd6', count: 6 }], mode: 'sum', hold: true, maxRolls: 0 },
   { id: 'd20', name: 'D&D d20', sub: 'Aanval, check, saving throw', groups: [{ type: 'd20', count: 1 }], mode: 'sum' },
   { id: 'adv', name: 'D&D voordeel / nadeel', sub: '2× d20', groups: [{ type: 'd20', count: 2 }], mode: 'advantage' },
   {

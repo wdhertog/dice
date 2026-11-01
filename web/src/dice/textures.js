@@ -1,7 +1,7 @@
 // Paints face atlases for a die type + skin and builds the material.
 import * as THREE from 'three';
 import { getDieDef, buildGeometry } from './geometry.js';
-import { getSkin } from '../skins/index.js';
+import { getSkin, onSkinChange } from '../skins/index.js';
 
 const CELL = 256;
 
@@ -102,6 +102,18 @@ function paintColor(def, skin) {
     skin.pattern(ctx, c.width, c.height, seeded(def.type.length * 977 + def.faces.length));
     ctx.restore();
   }
+  // Optional photo: drawn on every face, cropped to a square ("cover").
+  if (skin.image && skin.image.width) {
+    const img = skin.image;
+    const side = Math.min(img.width, img.height);
+    const sx = (img.width - side) / 2;
+    const sy = (img.height - side) / 2;
+    def.faces.forEach((f, fi) => {
+      const x = (fi % def.cols) * CELL;
+      const y = Math.floor(fi / def.cols) * CELL;
+      ctx.drawImage(img, sx, sy, side, side, x, y, CELL, CELL);
+    });
+  }
   // Darker borders give the faces a slightly bevelled look.
   if (skin.edge) {
     ctx.strokeStyle = skin.edge;
@@ -144,6 +156,17 @@ function tex(canvas, color = false) {
 const geoCache = new Map();
 const matCache = new Map();
 
+// Rebuild materials when a skin is edited.
+onSkinChange((id) => {
+  for (const [key, mat] of matCache) {
+    if (key.endsWith(`|${id}`)) {
+      [mat.map, mat.metalnessMap, mat.roughnessMap, mat.emissiveMap, mat.alphaMap].forEach((t) => t && t.dispose());
+      mat.dispose();
+      matCache.delete(key);
+    }
+  }
+});
+
 export function getGeometry(type) {
   if (!geoCache.has(type)) geoCache.set(type, buildGeometry(getDieDef(type)));
   return geoCache.get(type);
@@ -183,8 +206,8 @@ export function getMaterial(type, skinId) {
 }
 
 /** Small preview image of a skin (used in the skin picker). */
-export function skinPreview(skinId, size = 96) {
-  const skin = getSkin(skinId);
+export function skinPreview(skinOrId, size = 96) {
+  const skin = typeof skinOrId === 'string' ? getSkin(skinOrId) : skinOrId;
   const def = getDieDef('d6');
   const src = paintColor(def, skin);
   const c = document.createElement('canvas');
@@ -192,5 +215,25 @@ export function skinPreview(skinId, size = 96) {
   const ctx = c.getContext('2d');
   const fi = def.faces.findIndex((f) => f.value === 5);
   ctx.drawImage(src, (fi % def.cols) * CELL + CELL * 0.17, Math.floor(fi / def.cols) * CELL + CELL * 0.17, CELL * 0.66, CELL * 0.66, 0, 0, size, size);
+  return c.toDataURL();
+}
+
+/** Preview of one face (the highest value) of the given die type. */
+export function facePreview(skinId, type, size = 96) {
+  const skin = getSkin(skinId);
+  const def = getDieDef(type);
+  const src = paintColor(def, skin);
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const fi = def.faces.reduce((b, f, i) => (f.value > def.faces[b].value ? i : b), 0);
+  const f = def.faces[fi];
+  const k = size / CELL;
+  ctx.save();
+  ctx.scale(k, k);
+  facePath(ctx, f, CELL / 2, CELL / 2, (0.46 * CELL) / f.r2d);
+  ctx.clip();
+  ctx.drawImage(src, (fi % def.cols) * CELL, Math.floor(fi / def.cols) * CELL, CELL, CELL, 0, 0, CELL, CELL);
+  ctx.restore();
   return c.toDataURL();
 }

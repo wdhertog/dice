@@ -67,6 +67,10 @@ export class DiceWorld {
     this.rolling = false;
     this.needsRender = true;
     this.insets = { top: 0, bottom: 0 };
+    this.sizeFactor = 0.75; // < 1 = smaller dice (camera zooms out)
+    this.holdStrip = false; // reserve a strip at the bottom for held dice
+    this.tweens = [];
+    this.raycaster = new THREE.Raycaster();
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -106,6 +110,17 @@ export class DiceWorld {
     floor.receiveShadow = true;
     scene.add(floor);
     this.floor = floor;
+
+    // Strip at the bottom of the table where held dice are put aside.
+    const strip = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.22, depthWrite: false })
+    );
+    strip.rotation.x = -Math.PI / 2;
+    strip.position.y = 0.003;
+    strip.visible = false;
+    scene.add(strip);
+    this.strip = strip;
 
     // Physics
     const world = new CANNON.World({ gravity: new CANNON.Vec3(0, GRAVITY, 0) });
@@ -159,9 +174,11 @@ export class DiceWorld {
     const topF = Math.min(0.4, this.insets.top / h);
     const botF = Math.min(0.5, this.insets.bottom / h);
     const frac = Math.max(0.3, 1 - topF - botF);
-    const area = Math.max(36, this.dice.length * 8);
+    const k = 1 / (this.sizeFactor * this.sizeFactor);
+    const area = Math.max(36, this.dice.length * 8) * k;
     const D = Math.sqrt(area / (aspect * frac));
     const W = D * aspect;
+    const stripDepth = this.holdStrip ? 2.9 : 0;
     const height = D / (2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)));
     this.camera.position.set(0, height, 0);
     this.camera.lookAt(0, 0, 0);
@@ -172,8 +189,18 @@ export class DiceWorld {
       xMin: -W / 2 + m,
       xMax: W / 2 - m,
       zMin: -D / 2 + D * topF + m,
+      zMax: D / 2 - D * botF - m - stripDepth,
+    };
+    this.stripZone = {
+      xMin: -W / 2 + m,
+      xMax: W / 2 - m,
+      zMin: this.tray.zMax + 0.2,
       zMax: D / 2 - D * botF - m,
     };
+    const sz = this.stripZone;
+    this.strip.visible = this.holdStrip;
+    this.strip.scale.set(W * 1.6, sz.zMax - sz.zMin + m, 1);
+    this.strip.position.z = (sz.zMin + sz.zMax) / 2;
     const t = this.tray;
     this.walls.left.position.set(t.xMin, 0, 0);
     this.walls.right.position.set(t.xMax, 0, 0);
@@ -198,7 +225,8 @@ export class DiceWorld {
 
     // Keep resting dice inside the (possibly smaller) tray.
     if (!this.rolling) {
-      for (const d of this.dice) {
+      this.placeHeld(false);
+      for (const d of this.active()) {
         const p = d.body.position;
         if (p.x < t.xMin + 0.8 || p.x > t.xMax - 0.8 || p.z < t.zMin + 0.8 || p.z > t.zMax - 0.8) {
           this.arrange();
@@ -222,6 +250,7 @@ export class DiceWorld {
 
   /** dice: [{type, skin, group}] */
   setDice(list) {
+    this.tweens = [];
     for (const d of this.dice) {
       this.scene.remove(d.mesh);
       this.world.removeBody(d.body);
@@ -246,7 +275,8 @@ export class DiceWorld {
         if (v > 1.2) this.onImpact(v, e.body.mass > 0 ? 'dice' : 'floor');
       });
       this.world.addBody(body);
-      return { ...spec, index: i, mesh, body, def: getDieDef(spec.type) };
+      mesh.userData.index = i;
+      return { ...spec, index: i, mesh, body, def: getDieDef(spec.type), held: false };
     });
     this.layout();
     this.arrange();
@@ -254,14 +284,15 @@ export class DiceWorld {
 
   /** Lays the dice out neatly with a random face up (initial state). */
   arrange() {
-    const n = this.dice.length;
+    const list = this.active();
+    const n = list.length;
     if (!n) return;
     const t = this.tray;
     const W = t.xMax - t.xMin;
     const D = t.zMax - t.zMin;
     const cols = Math.max(1, Math.min(n, Math.floor(W / 2.6)));
     const rows = Math.ceil(n / cols);
-    this.dice.forEach((d, i) => {
+    list.forEach((d, i) => {
       const r = Math.floor(i / cols);
       const inRow = Math.min(cols, n - r * cols);
       const c = i % cols;
@@ -303,11 +334,12 @@ export class DiceWorld {
   throw(intensity = 1) {
     const t = this.tray;
     const W = t.xMax - t.xMin;
-    const n = this.dice.length;
+    const list = this.active();
+    const n = list.length;
     const perLayer = Math.max(1, Math.floor(W / 1.9));
     const power = THREE.MathUtils.clamp(intensity, 0.7, 1.6);
     const fromBottom = Math.random() < 0.5;
-    this.dice.forEach((d, i) => {
+    list.forEach((d, i) => {
       const layer = Math.floor(i / perLayer);
       const slot = i % perLayer;
       const inLayer = Math.min(perLayer, n - layer * perLayer);
@@ -343,8 +375,9 @@ export class DiceWorld {
   checkSettled() {
     const elapsed = this.simTime * 1000;
     const t = this.tray;
+    const list = this.active();
     // Dice that escaped the tray (should not happen) are put back.
-    for (const d of this.dice) {
+    for (const d of list) {
       const p = d.body.position;
       if (p.y < -2 || p.x < t.xMin - 1 || p.x > t.xMax + 1 || p.z < t.zMin - 1 || p.z > t.zMax + 1) {
         d.body.position.set((t.xMin + t.xMax) / 2, 3, (t.zMin + t.zMax) / 2);
@@ -352,13 +385,13 @@ export class DiceWorld {
         d.body.wakeUp();
       }
     }
-    const allAsleep = this.dice.every((d) => d.body.sleepState === CANNON.Body.SLEEPING);
-    const allSlow = this.dice.every((d) => d.body.velocity.length() < 0.05 && d.body.angularVelocity.length() < 0.05);
+    const allAsleep = list.every((d) => d.body.sleepState === CANNON.Body.SLEEPING);
+    const allSlow = list.every((d) => d.body.velocity.length() < 0.05 && d.body.angularVelocity.length() < 0.05);
     if (!(allAsleep || (allSlow && elapsed > 1500) || elapsed > 9000)) return;
 
     // Leaning dice (e.g. against each other) get a little nudge.
     // Dice lying on top of other dice are nudged off as well.
-    const cocked = this.dice.filter((d) => this.readDie(d).dot < 0.96 || d.body.position.y > d.def.restHeight + 0.35);
+    const cocked = list.filter((d) => this.readDie(d).dot < 0.96 || d.body.position.y > d.def.restHeight + 0.35);
     if (cocked.length && this.nudges < 6 && elapsed < 15000) {
       this.nudges++;
       const cx = (t.xMin + t.xMax) / 2;
@@ -372,7 +405,7 @@ export class DiceWorld {
         if (!nearWall) {
           let nearest = null;
           let best = Infinity;
-          for (const o of this.dice) {
+          for (const o of list) {
             if (o === d) continue;
             const dist = o.body.position.distanceTo(p);
             if (dist < best) {
@@ -403,10 +436,168 @@ export class DiceWorld {
     if (resolve) resolve(results);
   }
 
+  // ---------- size ----------
+
+  setSize(factor) {
+    this.sizeFactor = factor;
+    this.layout();
+    if (!this.rolling) this.arrangeIfOutside();
+  }
+
+  setHoldStrip(on) {
+    if (this.holdStrip === on) return;
+    this.holdStrip = on;
+    if (!on) this.dice.forEach((d) => this.unholdDie(d, false));
+    this.layout();
+    this.arrangeIfOutside();
+  }
+
+  arrangeIfOutside() {
+    const t = this.tray;
+    if (this.active().some((d) => {
+      const p = d.body.position;
+      return p.x < t.xMin + 0.6 || p.x > t.xMax - 0.6 || p.z < t.zMin + 0.6 || p.z > t.zMax - 0.6;
+    })) this.arrange();
+  }
+
+  // ---------- holding dice aside ----------
+
+  active() {
+    return this.dice.filter((d) => !d.held);
+  }
+
+  /** Quaternion with the current top face exactly up, and the matching rest height. */
+  flatPose(d) {
+    const q = new THREE.Quaternion().copy(d.body.quaternion);
+    const { face } = this.readDie(d);
+    const want = d.def.readDown ? UP.clone().negate() : UP;
+    const n = face.normal.clone().applyQuaternion(q);
+    q.premultiply(new THREE.Quaternion().setFromUnitVectors(n, want));
+    let low = null;
+    for (const f of d.def.faces) {
+      const y = f.normal.clone().applyQuaternion(q).y;
+      if (!low || y < low.y) low = { y, f };
+    }
+    return { q, y: low.f.normal.dot(low.f.center) + 0.01 };
+  }
+
+  /** Index of the die under the given screen point, or -1. */
+  pick(clientX, clientY) {
+    const r = this.canvas.getBoundingClientRect();
+    const v = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(v, this.camera);
+    const hit = this.raycaster.intersectObjects(this.dice.map((d) => d.mesh), false)[0];
+    return hit ? hit.object.userData.index : -1;
+  }
+
+  setHeld(index, held) {
+    const d = this.dice[index];
+    if (!d || d.held === held || this.rolling) return;
+    if (held) {
+      d.held = true;
+      d.holdOrder = performance.now();
+      this.world.removeBody(d.body);
+      this.placeHeld(true);
+    } else {
+      this.unholdDie(d, true);
+      this.placeHeld(true);
+    }
+  }
+
+  unholdDie(d, animate) {
+    if (!d.held) return;
+    d.held = false;
+    const { q, y } = this.flatPose(d);
+    const spot = this.freeSpot(d);
+    this.moveTo(d, new THREE.Vector3(spot.x, y, spot.z), q, animate, () => {
+      this.world.addBody(d.body);
+      d.body.velocity.setZero();
+      d.body.angularVelocity.setZero();
+      d.body.sleep();
+    });
+  }
+
+  releaseAll(animate = true) {
+    this.dice.forEach((d) => this.unholdDie(d, animate));
+  }
+
+  /** Lines the held dice up in the strip, in the order they were held. */
+  placeHeld(animate) {
+    const held = this.dice.filter((d) => d.held).sort((a, b) => a.holdOrder - b.holdOrder);
+    if (!held.length) return;
+    const sz = this.stripZone;
+    const W = sz.xMax - sz.xMin;
+    const step = Math.min(2.4, W / held.length);
+    const z = (sz.zMin + sz.zMax) / 2;
+    held.forEach((d, i) => {
+      const { q, y } = this.flatPose(d);
+      const x = (i - (held.length - 1) / 2) * step;
+      this.moveTo(d, new THREE.Vector3(x, y, z), q, animate);
+    });
+  }
+
+  /** A spot in the tray far away from the other dice. */
+  freeSpot(self) {
+    const t = this.tray;
+    let best = null;
+    for (let i = 0; i < 40; i++) {
+      const x = t.xMin + 1 + Math.random() * (t.xMax - t.xMin - 2);
+      const z = t.zMin + 1 + Math.random() * (t.zMax - t.zMin - 2);
+      let min = Infinity;
+      for (const o of this.dice) {
+        if (o === self || o.held) continue;
+        min = Math.min(min, Math.hypot(o.body.position.x - x, o.body.position.z - z));
+      }
+      if (!best || min > best.min) best = { x, z, min };
+    }
+    return best;
+  }
+
+  moveTo(d, pos, q, animate, done) {
+    this.tweens = this.tweens.filter((tw) => tw.d !== d);
+    if (!animate) {
+      d.body.position.set(pos.x, pos.y, pos.z);
+      d.body.quaternion.set(q.x, q.y, q.z, q.w);
+      this.sync(d);
+      if (done) done();
+      this.needsRender = true;
+      return;
+    }
+    this.tweens.push({
+      d,
+      p0: new THREE.Vector3().copy(d.body.position),
+      p1: pos,
+      q0: new THREE.Quaternion().copy(d.body.quaternion),
+      q1: q,
+      t0: performance.now(),
+      dur: 280,
+      done,
+    });
+    this.needsRender = true;
+  }
+
+  runTweens(now) {
+    if (!this.tweens.length) return;
+    this.tweens = this.tweens.filter((tw) => {
+      const k = Math.min(1, (now - tw.t0) / tw.dur);
+      const e = 1 - Math.pow(1 - k, 3);
+      const p = new THREE.Vector3().lerpVectors(tw.p0, tw.p1, e);
+      p.y += Math.sin(Math.PI * k) * 1.2; // little hop
+      const q = new THREE.Quaternion().slerpQuaternions(tw.q0, tw.q1, e);
+      tw.d.body.position.set(p.x, p.y, p.z);
+      tw.d.body.quaternion.set(q.x, q.y, q.z, q.w);
+      this.sync(tw.d);
+      if (k >= 1 && tw.done) tw.done();
+      return k < 1;
+    });
+    this.needsRender = true;
+  }
+
   frame() {
     const now = performance.now();
     const dt = Math.min(0.05, (now - this.lastTime) / 1000);
     this.lastTime = now;
+    this.runTweens(now);
     if (this.rolling) {
       this.world.step(1 / 120, dt, 8);
       this.simTime += dt;
@@ -416,7 +607,7 @@ export class DiceWorld {
     }
     if (this.needsRender) {
       this.renderer.render(this.scene, this.camera);
-      this.needsRender = this.rolling;
+      this.needsRender = this.rolling || this.tweens.length > 0;
     }
   }
 }

@@ -1,7 +1,8 @@
 # Dobbelstenen
 
-Android-app met geanimeerde 3D-dobbelstenen. Schud je telefoon om te gooien; het
-resultaat blijft minimaal 20 seconden staan (schudden wordt in die tijd genegeerd).
+Android-app met geanimeerde 3D-dobbelstenen. Schud je telefoon om te gooien. Na een worp volgt
+een korte rusttijd (standaard 2 seconden) waarin schudden wordt genegeerd; het resultaat blijft
+staan tot je opnieuw gooit.
 
 ## Downloaden
 
@@ -14,13 +15,18 @@ toe. Nieuwe versies installeer je gewoon over de oude heen.
 
 - 3D-dobbelstenen met physics: d4, d6, d8, d10, d12, d20 en d% (d100)
 - Gooien door te schudden, met trillen en geluid
-- Resultaat blijft minimaal 20 seconden staan (in te stellen tot 60 s); het scherm blijft aan
+- Rusttijd na een worp instelbaar (1–30 s, standaard 2 s); het scherm blijft aan
+- Grootte van de dobbelstenen instelbaar
+- Dobbelstenen apart leggen (tik erop) en met de rest opnieuw gooien, met een teller voor
+  het aantal worpen per beurt. Per set in te stellen; Yahtzee staat standaard op 3 worpen,
+  10.000 op onbeperkt
 - Snelkeuzes: 1 of 2 dobbelstenen, Yahtzee (herkent de combinaties), Risk (rekent uit wie
   legers verliest), 10.000/Farkle, D&D (d20, voordeel/nadeel, complete set, eigenschap 4d6,
   Fireball 8d6, percentage)
 - Eigen combinaties: kies soort, aantal en kleur per groep, en sla ze op
 - Thema's: Klassiek, Robijn, Saffier, Smaragd, Onyx & goud, Marmer, Hout, Neon,
-  Sterrenstelsel, Amethist (glas)
+  Sterrenstelsel, Amethist (glas), allemaal met zijdeglans
+- Eigen skins maken in de app (kleuren, patroon, glans, eigen foto) en delen als tekst
 
 ## Opbouw
 
@@ -35,27 +41,9 @@ web/                 De eigenlijke app (three.js + cannon-es)
 .github/workflows/   Bouwt de APK en maakt een release
 ```
 
-## Een eigen thema (skin) toevoegen
+## Eigen skins
 
-Voeg een object toe aan `web/src/skins/builtin.js` (of maak een nieuw bestand naar het
-voorbeeld van `classic.js` en registreer het in `skins/index.js`):
-
-```js
-{
-  id: 'oranje',
-  name: 'Oranje',
-  base: '#ff7a00',          // kleur van de vlakken
-  ink: '#ffffff',           // kleur van cijfers en ogen
-  pattern(ctx, w, h, rnd) { /* optioneel: teken een achtergrond op de canvas */ },
-  material: { roughness: 0.3, clearcoat: 1 },  // opties voor THREE.MeshPhysicalMaterial
-  // optioneel: inkMetal: true (metalen cijfers), glow: '#0f0' (oplichtende cijfers),
-  //            alpha: 0.6 (doorzichtig), pips: false (cijfers i.p.v. ogen op d6),
-  //            font: 'Georgia, serif'
-}
-```
-
-Een afbeelding als textuur kan ook: laad die vooraf (`new Image()`) en teken hem in
-`pattern()` met `ctx.drawImage(...)`.
+Zie [SKINS.md](SKINS.md): skins maken in de app of in de code.
 
 ## Zelf bouwen
 

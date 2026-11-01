@@ -1,7 +1,10 @@
 package nl.wdhertog.dice;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Color;
 import android.hardware.Sensor;
@@ -15,6 +18,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -41,6 +45,9 @@ public class MainActivity extends Activity implements SensorEventListener {
     private Sensor accelerometer;
     private Vibrator vibrator;
 
+    private static final int PICK_IMAGE = 1;
+    private ValueCallback<Uri[]> fileCallback;
+
     private final ArrayDeque<Long> peaks = new ArrayDeque<>();
     private long lastPeak = 0;
     private long lastShake = 0;
@@ -63,7 +70,24 @@ public class MainActivity extends Activity implements SensorEventListener {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
         webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(new WebChromeClient());
+        webView.setWebChromeClient(new WebChromeClient() {
+            // Needed for <input type="file"> (photo for a custom skin).
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (fileCallback != null) fileCallback.onReceiveValue(null);
+                fileCallback = callback;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "Kies een foto"), PICK_IMAGE);
+                } catch (ActivityNotFoundException e) {
+                    fileCallback = null;
+                    return false;
+                }
+                return true;
+            }
+        });
         webView.addJavascriptInterface(new Bridge(), "AndroidBridge");
         webView.setOverScrollMode(WebView.OVER_SCROLL_NEVER);
         setContentView(webView);
@@ -74,6 +98,18 @@ public class MainActivity extends Activity implements SensorEventListener {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_IMAGE || fileCallback == null) return;
+        Uri[] result = null;
+        if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+            result = new Uri[] { data.getData() };
+        }
+        fileCallback.onReceiveValue(result);
+        fileCallback = null;
     }
 
     @Override

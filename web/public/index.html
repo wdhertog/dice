@@ -26,6 +26,10 @@
       <div class="sub" id="resultSub"></div>
     </div>
     <div class="chips" id="chips"></div>
+    <div class="turnbar hidden" id="turnbar">
+      <span id="turnText">Worp 1 van 3</span>
+      <button id="newTurn" class="btn small">Nieuwe beurt</button>
+    </div>
     <div class="status" id="status">
       <svg class="ring" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15" /><circle class="ring-fg" id="ringFg" cx="18" cy="18" r="15" /></svg>
       <span id="statusText">Schud je telefoon om te gooien</span>
@@ -43,6 +47,13 @@
     <div class="tab-body" data-tab="dice">
       <h3>Snelkeuze</h3>
       <div class="preset-list" id="presetList"></div>
+      <h3>Regels voor deze set</h3>
+      <label class="row"><span>Dobbelstenen apart leggen<small>Tik na een worp op een dobbelsteen om hem vast te houden</small></span><input type="checkbox" id="ruleHold" /></label>
+      <label class="row" id="ruleRollsRow"><span>Worpen per beurt</span>
+        <select id="ruleRolls" class="text">
+          <option value="0">Onbeperkt</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        </select>
+      </label>
       <h3>Eigen combinatie</h3>
       <div id="editor" class="editor"></div>
       <div class="editor-actions">
@@ -57,16 +68,52 @@
     <div class="tab-body hidden" data-tab="skins">
       <h3>Kies een thema</h3>
       <div class="skin-grid" id="skinGrid"></div>
+      <div class="editor-actions">
+        <button id="newSkin" class="btn primary">+ Eigen skin maken</button>
+        <button id="importSkin" class="btn ghost">Skin importeren</button>
+      </div>
       <p class="hint">Sommige sets (zoals Risk) gebruiken vaste kleuren per groep.</p>
+    </div>
+    <div class="tab-body hidden" data-tab="skinEditor">
+      <h3 id="skinEditorTitle">Eigen skin</h3>
+      <div class="skin-preview"><img id="skinPrev6" alt="" /><img id="skinPrev20" alt="" /></div>
+      <label class="row"><span>Naam</span><input id="seName" class="text" maxlength="24" /></label>
+      <label class="row"><span>Kleur dobbelsteen</span><input type="color" id="seBase" /></label>
+      <label class="row"><span>Kleur cijfers/ogen</span><input type="color" id="seInk" /></label>
+      <label class="row"><span>Patroon</span><select id="sePattern" class="text"></select></label>
+      <label class="row col"><span>Glans: <b id="seGlossVal">zijdeglans</b></span><input type="range" id="seGloss" min="0" max="1" step="0.05" /></label>
+      <div class="row"><span>Eigen foto<small>Wordt op elk vlak getoond</small></span>
+        <span><button id="sePhoto" class="btn small">Kies foto</button> <button id="sePhotoClear" class="btn small hidden">×</button></span>
+        <input type="file" id="sePhotoInput" accept="image/*" class="hidden" />
+      </div>
+      <label class="row"><span>Metalen cijfers</span><input type="checkbox" id="seMetal" /></label>
+      <label class="row"><span>Oplichtende cijfers</span><input type="checkbox" id="seGlow" /></label>
+      <label class="row"><span>Doorzichtig</span><input type="checkbox" id="seAlpha" /></label>
+      <label class="row"><span>Ogen op d6<small>Uit = cijfers</small></span><input type="checkbox" id="sePips" /></label>
+      <div class="editor-actions">
+        <button id="seDelete" class="btn ghost danger">Verwijderen</button>
+        <button id="seShare" class="btn ghost">Delen</button>
+        <button id="seCancel" class="btn ghost">Annuleren</button>
+        <button id="seSave" class="btn primary">Opslaan</button>
+      </div>
+      <div id="shareBox" class="hidden">
+        <p class="hint" id="shareHint"></p>
+        <textarea id="shareText" class="text share" spellcheck="false"></textarea>
+        <div class="editor-actions"><button id="shareCopy" class="btn ghost">Kopiëren</button><button id="shareImport" class="btn primary hidden">Importeren</button></div>
+      </div>
     </div>
     <div class="tab-body hidden" data-tab="settings">
       <label class="row"><span>Geluid</span><input type="checkbox" id="optSound" /></label>
       <label class="row"><span>Trillen</span><input type="checkbox" id="optVibrate" /></label>
       <label class="row col">
-        <span>Resultaat minimaal tonen: <b id="holdVal">20</b> seconden</span>
-        <input type="range" id="optHold" min="20" max="60" step="5" />
+        <span>Grootte dobbelstenen: <b id="sizeVal">75%</b></span>
+        <input type="range" id="optSize" min="0.4" max="1.2" step="0.05" />
       </label>
-      <p class="hint">Tijdens deze tijd wordt schudden genegeerd, zodat het resultaat niet per ongeluk verdwijnt. Het scherm blijft aan zolang de app open is.</p>
+      <label class="row col">
+        <span>Rusttijd na een worp: <b id="holdVal">2</b> s</span>
+        <input type="range" id="optHold" min="1" max="30" step="1" />
+      </label>
+      <p class="hint">Tijdens de rusttijd wordt schudden genegeerd, zodat het resultaat niet per ongeluk verdwijnt. Het resultaat blijft daarna staan tot je opnieuw gooit. Het scherm blijft aan zolang de app open is.</p>
     </div>
   </div>
 

@@ -9,7 +9,7 @@
   --win: #4ade80;
   --lose: #f87171;
   --top-h: 64px;
-  --result-h: 200px;
+  --result-h: 222px;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -81,7 +81,7 @@ button { font: inherit; color: inherit; }
 }
 
 .chips {
-  display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px;
+  display: flex; gap: 8px; overflow-x: auto; padding: 10px 2px 4px;
   justify-content: safe center; scrollbar-width: none; flex: 1; align-items: center;
 }
 .chips::-webkit-scrollbar { display: none; }
@@ -182,3 +182,21 @@ h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 .row input[type='checkbox'] { width: 22px; height: 22px; accent-color: var(--accent); }
 .row input[type='range'] { accent-color: var(--accent); width: 100%; }
 .hint { color: var(--muted); font-size: 13px; line-height: 1.4; }
+
+.row small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.row select.text { max-width: 50%; }
+.row input[type='color'] { width: 52px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: none; padding: 2px; }
+.row .text { max-width: 55%; }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+.btn.danger { color: var(--lose); }
+.editor-actions { flex-wrap: wrap; }
+.turnbar { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 14px; color: var(--text); }
+.turnbar.hidden { display: none; }
+.chip.held { outline: 3px solid var(--accent); outline-offset: 1px; }
+.chip.held::before { content: 'vast'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 9px; background: var(--accent); color: #1a1a1a; border-radius: 4px; padding: 0 3px; font-weight: 700; }
+.chip.tappable { cursor: pointer; }
+.skin { position: relative; }
+.skin .edit { position: absolute; top: 4px; right: 4px; font-size: 13px; background: rgba(0,0,0,0.4); border-radius: 6px; padding: 1px 5px; }
+.skin-preview { display: flex; justify-content: center; gap: 16px; margin: 6px 0 8px; }
+.skin-preview img { width: 84px; height: 84px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); background: #0b1a16; }
+.share { width: 100%; max-width: none !important; height: 110px; font-family: monospace; font-size: 11px; }
