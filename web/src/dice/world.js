@@ -1,7 +1,7 @@
 // Three.js scene + cannon-es physics for the dice tray.
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { getDieDef } from './geometry.js';
+import { getDieDef, roundedHull } from './geometry.js';
 import { getGeometry, getMaterial } from './textures.js';
 
 const FOV = 38;
@@ -68,6 +68,7 @@ export class DiceWorld {
     this.needsRender = true;
     this.insets = { top: 0, bottom: 0 };
     this.sizeFactor = 0.75; // < 1 = smaller dice (camera zooms out)
+    this.rounding = 0; // rounded edges: fraction of the inradius (0 = sharp)
     this.holdStrip = false; // reserve a strip at the bottom for held dice
     this.tweens = [];
     this.raycaster = new THREE.Raycaster();
@@ -238,13 +239,15 @@ export class DiceWorld {
   }
 
   shapeFor(type) {
-    if (this.shapeCache.has(type)) return this.shapeCache.get(type);
+    const key = `${type}|${this.rounding}`;
+    if (this.shapeCache.has(key)) return this.shapeCache.get(key);
     const def = getDieDef(type);
+    const src = this.rounding > 0 ? roundedHull(def, this.rounding) : { verts: def.verts, faces: def.faces.map((f) => f.idx) };
     const shape = new CANNON.ConvexPolyhedron({
-      vertices: def.verts.map((v) => new CANNON.Vec3(v.x, v.y, v.z)),
-      faces: def.faces.map((f) => f.idx),
+      vertices: src.verts.map((v) => new CANNON.Vec3(v.x, v.y, v.z)),
+      faces: src.faces,
     });
-    this.shapeCache.set(type, shape);
+    this.shapeCache.set(key, shape);
     return shape;
   }
 
@@ -256,7 +259,7 @@ export class DiceWorld {
       this.world.removeBody(d.body);
     }
     this.dice = list.map((spec, i) => {
-      const mesh = new THREE.Mesh(getGeometry(spec.type), getMaterial(spec.type, spec.skin));
+      const mesh = new THREE.Mesh(getGeometry(spec.type, this.rounding), getMaterial(spec.type, spec.skin));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       this.scene.add(mesh);

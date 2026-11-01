@@ -1,6 +1,6 @@
 // Paints face atlases for a die type + skin and builds the material.
 import * as THREE from 'three';
-import { getDieDef, buildGeometry } from './geometry.js';
+import { getDieDef, buildGeometry, buildRoundedGeometry } from './geometry.js';
 import { getSkin, onSkinChange } from '../skins/index.js';
 
 const CELL = 256;
@@ -167,9 +167,14 @@ onSkinChange((id) => {
   }
 });
 
-export function getGeometry(type) {
-  if (!geoCache.has(type)) geoCache.set(type, buildGeometry(getDieDef(type)));
-  return geoCache.get(type);
+/** round: rounding as a fraction of the inradius (0 = sharp edges). */
+export function getGeometry(type, round = 0) {
+  const key = `${type}|${round}`;
+  if (!geoCache.has(key)) {
+    const def = getDieDef(type);
+    geoCache.set(key, round > 0 ? buildRoundedGeometry(def, round) : buildGeometry(def));
+  }
+  return geoCache.get(key);
 }
 
 export function getMaterial(type, skinId) {

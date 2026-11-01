@@ -5,6 +5,10 @@ plugins {
 // Version code increases with every CI build so a new APK installs over the old one.
 val buildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
 
+// Test builds (from branches other than main) get their own app id and name,
+// so they install next to the normal app.
+val testBuild = System.getenv("DICE_TEST_BUILD") == "true"
+
 android {
     namespace = "nl.wdhertog.dice"
     compileSdk = 35
@@ -15,6 +19,11 @@ android {
         targetSdk = 34
         versionCode = buildNumber
         versionName = "1.0.$buildNumber"
+        manifestPlaceholders["appLabel"] = if (testBuild) "Dobbelstenen (test)" else "Dobbelstenen"
+        if (testBuild) {
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+        }
     }
 
     signingConfigs {
